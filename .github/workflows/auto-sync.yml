@@ -1,0 +1,39 @@
+name: LSP Daily Data UPSERT
+
+# Kích hoạt khi có file được đẩy (push) vào thư mục daily_uploads
+on:
+  push:
+    paths:
+      - 'daily_uploads/**.csv'
+  
+  # Nút bấm thủ công trên giao diện Github nếu bạn muốn ép chạy
+  workflow_dispatch: 
+
+jobs:
+  update-master-database:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Cài đặt Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Cài đặt thư viện Pandas
+        run: pip install pandas
+
+      - name: Chạy Kịch bản hợp nhất dữ liệu (Python Script)
+        run: python update_data.py
+
+      - name: Lưu file Master mới lên GitHub
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action Bot"
+          git add data/Master_Total.csv data/Master_Approver.csv
+          # Git commit file master, và xóa file trong thư mục daily_uploads
+          git add daily_uploads/ -u 
+          git commit -m "🤖 Auto-Upsert: Cập nhật dữ liệu ngày $(date +'%Y-%m-%d')" || echo "No changes to commit"
+          git push
